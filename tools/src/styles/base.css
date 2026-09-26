@@ -1,0 +1,322 @@
+/* ==========================================================================
+   base.css —— 设计令牌 / 重置 / 排版 / 通用控件
+
+   所有颜色、间距节奏、动效时长都从这里出。改令牌即可改全局，
+   组件样式一律消费 var()，不写死色值。
+   ========================================================================== */
+
+:root {
+  color-scheme: light;
+
+  /* 纸面与墨色：冷调中性灰。刻意避开生成式页面常见的暖米色底与浅紫底。 */
+  --bg:         #e7e9ec;
+  --surface:    #ffffff;
+  --surface-2:  #f3f4f6;
+  --surface-3:  #eaecef;
+  --line:       #d9dce1;
+  --line-soft:  #e7e9ec;
+  --line-hard:  #b4b9c0;
+  --ink:        #1d2127;
+  --ink-2:      #565e68;
+  --ink-3:      #878f99;
+  --focus:      #2f6fd0;
+  --danger:     #b23c30;
+  --danger-tint:#fbeeec;
+
+  --radius:     3px;
+
+  /* 动效：快、自然、克制。只用于 transform / opacity / 颜色，不碰布局属性。 */
+  --ease:       cubic-bezier(.22,.61,.36,1);
+  --t-instant:  90ms;
+  --t-fast:     120ms;
+  --t-base:     160ms;
+  --t-panel:    200ms;
+
+  --shadow-chip:       0 1px 1px rgba(20,24,29,.05), 0 1px 2px rgba(20,24,29,.06);
+  --shadow-chip-hover: 0 2px 4px rgba(20,24,29,.09), 0 1px 1px rgba(20,24,29,.06);
+  --shadow-float:      0 8px 20px rgba(20,24,29,.17), 0 2px 5px rgba(20,24,29,.10);
+  --shadow-panel:      -14px 0 34px rgba(20,24,29,.13);
+
+  --font: "Microsoft YaHei UI","Microsoft YaHei","PingFang SC","Hiragino Sans GB",
+          "Source Han Sans SC","Noto Sans CJK SC","Segoe UI",system-ui,-apple-system,sans-serif;
+
+  /* 字号缩放。
+     四个档位只改 --fs-scale 一个数，所有字号都从这里乘出来。
+
+     缩放挂在类名上而不是由 JS 写内联样式：内联的 --fs-scale 优先级高于
+     任何样式表规则，加上去之后窄屏那道封顶就再也压不住了。
+
+     基准值整体上调过一档（11/12/13/15 → 12/13/15/17）：四档系数没动，
+     所以档与档之间的比例不变，只是每一档都大了一号。 */
+  --fs-scale: 1;
+
+  --fs-micro: calc(12px * var(--fs-scale));
+  --fs-sm:    calc(13px * var(--fs-scale));
+  --fs-base:  calc(15px * var(--fs-scale));
+  --fs-lg:    calc(17px * var(--fs-scale));
+
+  /* 课程格上那个大字走另一条阶梯（下面 --glyph-* 两条）。
+     它不和 --fs-scale 共用一个系数：正文跟着放到 1.25 倍，按钮、Tag、
+     标题条就已经在撑破的边缘了；而科目框上的字是坐在教室最后一排要看清
+     的东西，四个档位之间得有 3 倍的跨度。两个目标不一样，就不该由同一个
+     数决定。
+
+     --glyph-half 是「特大」档的字号 —— 科目框高度的一半。
+     cqh 的 1% 是所在容器的内容盒高，容器是 .board-block（container-type 见
+     board.css）。块的内容盒三等分就是三个格子 —— 行线画在格子自己的框内
+     （box-sizing: border-box），不占额外的份，实测一格就是内容盒的 1/3.0000。
+     所以半格高 = 1/6 ≈ 16.67cqh。
+     17.3 是 16.67 再除以墨迹率：中文的墨迹只占字身盒的 96%~98%（Microsoft
+     YaHei UI 实测，随字号微微浮动），而「字占框的一半」说的是看得见的笔画，
+     不是字身盒。16.67 / .965 ≈ 17.3。
+
+     cqh 在真正用到它的元素上才解析，所以窗口、全屏、窄屏里这个「一半」的
+     关系都自动成立，不必各处再写一遍。实测 900×700 到 1920×1080 之间、
+     以及 340px 窄屏下，墨迹都落在格高的 50% 上下 1% 以内。 */
+  --glyph-half: 17.3cqh;
+
+  --glyph-scale: .465;
+
+  /* 窄屏（≤760px）给科目大字封的上限，由 board.css 末尾那道媒体查询消费。
+     一格只有 165px 宽，横向排开之后留给作业的只有 100px，而一条带三位页码的
+     作业按「0.9 × 科目大字」排出来，光页码就有 3.2em 宽 —— 不封顶的话整条
+     会被格子裁掉，连页码都看不见（页码不让步，见 board.css 里 .asg__page）。
+     封顶值是绝对的 px、不乘 --fs-scale：一格多宽是屏幕定的，跟用户选了哪一档
+     字号没关系。三区的 Tag 也照这个数算（0.75 倍，见 tags.css），
+     否则二区的大字被封住了、三区的 Tag 还在按阶梯长，「拖进去变大」会反过来。 */
+  --glyph-cap: 17px;
+
+  /* 科目大字的实际字号。只在 .board-block 里面用 —— cqh 是「用它的那个
+     元素」去问自己最近的容器，出了 .board-block 查询的就是别的盒子了。
+     目前两处消费：课程格上的大字本身，和格内作业条目（0.9 倍，见 board.css）。
+
+     三区的 Tag 量不到这个盒子（它在 .board-block 外面），所以那边另有一份
+     挂在 .stack 上的系数，见 tags.css 里 .tags-body 的注释。 */
+  --glyph-size: calc(var(--glyph-half) * var(--glyph-scale));
+}
+
+/* 字号四档。标准档不写 --fs-scale —— 上面 :root 的 1 就是它。
+
+   课程大字的四个系数由用户给的两个锚点定出来：紧凑 = 改版前「特大」档的
+   字号（167px 高的科目框里 27.5px），特大 = 框高的一半。在两个锚点之间
+   按对数等分，每档乘 1.467 —— 这样四档的观感步长是均匀的。
+   标准档 = .317 × 1.467 ≈ .465。 */
+:root.fs-compact { --fs-scale: .9;    --glyph-scale: .317; }
+:root.fs-large   { --fs-scale: 1.12;  --glyph-scale: .682; }
+:root.fs-xlarge  { --fs-scale: 1.25;  --glyph-scale: 1; }
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body { height: 100%; }
+
+body {
+  margin: 0;
+  font-family: var(--font);
+  font-size: var(--fs-base);
+  line-height: 1.5;
+  color: var(--ink);
+  background: var(--bg);
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, p, dl, dd, dt, figure { margin: 0; }
+dl, dd { padding: 0; }
+
+button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+
+input { font: inherit; color: inherit; }
+
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+::selection { background: #cfe0f6; }
+
+/* 细滚动条：默认滚动条会破坏表格的紧凑感 */
+* { scrollbar-width: thin; scrollbar-color: #c3c8cf transparent; }
+*::-webkit-scrollbar { width: 8px; height: 8px; }
+*::-webkit-scrollbar-thumb {
+  background: #c9ced5;
+  border: 2px solid transparent;
+  background-clip: content-box;
+  border-radius: 4px;
+}
+*::-webkit-scrollbar-thumb:hover { background: #aeb4bc; background-clip: content-box; }
+*::-webkit-scrollbar-track { background: transparent; }
+
+/* ---------------------------------------------------------------- 通用控件 */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: calc(30px * var(--fs-scale));
+  padding: 0 11px;
+  border: 1px solid var(--line-hard);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: var(--fs-sm);
+  box-shadow: var(--shadow-chip);
+  transition: background-color var(--t-fast) var(--ease),
+              border-color     var(--t-fast) var(--ease),
+              box-shadow       var(--t-fast) var(--ease),
+              color            var(--t-fast) var(--ease),
+              transform        var(--t-fast) var(--ease);
+}
+.btn:hover  { background: var(--surface-2); border-color: #9ba2ab; }
+.btn:active { transform: translateY(1px); box-shadow: none; }
+.btn--block { width: 100%; }
+.btn--danger { color: var(--danger); border-color: #ddb6b0; }
+.btn--danger:hover { background: var(--danger-tint); border-color: #cd9a92; }
+.btn--danger.is-confirming {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: #fff;
+}
+.btn__icon { flex: none; display: block; color: var(--ink-3); transition: color var(--t-fast) var(--ease); }
+.btn:hover .btn__icon { color: var(--ink-2); }
+
+/* ------------------------------------------------------------ 分段控件
+   几个互斥档位选一个。凹槽 + 选中项浮起，读起来是「一个控件的四挡」，
+   而不是四个各自为政的按钮 —— 后者会让人以为可以多选。
+
+   选中项不做成填充蓝：蓝色在这个界面里是「焦点 / 点选中的 Tag」的语言，
+   档位是长期状态，用浮起 + 加重就够了。 */
+
+.seg {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;      /* 四格等宽，不要按文字长短参差不齐 */
+  align-items: center;
+  gap: 2px;
+  min-height: calc(26px * var(--fs-scale));
+  padding: 2px;
+  border: 1px solid var(--line-hard);
+  border-radius: var(--radius);
+  background: var(--surface-3);
+}
+
+.seg__btn {
+  min-width: 0;
+  min-height: calc(20px * var(--fs-scale));
+  padding: 0 4px;
+  border-radius: 2px;
+  color: var(--ink-2);
+  font-size: var(--fs-micro);
+  /* 中文默认在任何字符间都能断行，不锁住的话「特大」会竖成两行 */
+  white-space: nowrap;
+  transition: background-color var(--t-fast) var(--ease),
+              color            var(--t-fast) var(--ease),
+              box-shadow       var(--t-fast) var(--ease);
+}
+.seg__btn:hover { color: var(--ink); }
+
+.seg__btn[aria-pressed="true"] {
+  background: var(--surface);
+  color: var(--ink);
+  font-weight: 600;
+  box-shadow: var(--shadow-chip);
+}
+
+/* ---------------------------------------------------------------- 抽屉
+   右侧滑出的面板外壳：设置与历史记录共用，只是里面装的东西不同。
+   ---- 分隔线以下的部分由 views/drawer.js 生成。 */
+
+.scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 700;
+  background: rgba(23,27,32,.30);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--t-panel) var(--ease);
+}
+.scrim.is-open { opacity: 1; pointer-events: auto; }
+
+.drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 701;
+  width: min(400px, 94vw);
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border-left: 1px solid var(--line-hard);
+  box-shadow: var(--shadow-panel);
+  transform: translateX(101%);
+  transition: transform var(--t-panel) var(--ease);
+}
+.drawer.is-open { transform: translateX(0); }
+
+.drawer__head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 42px;
+  padding: 0 10px 0 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.drawer__title { font-size: var(--fs-base); font-weight: 600; }
+
+.drawer__close {
+  margin-left: auto;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: var(--radius);
+  color: var(--ink-3);
+  transition: background-color var(--t-fast) var(--ease),
+              color            var(--t-fast) var(--ease);
+}
+.drawer__close:hover { background: var(--surface-2); color: var(--ink); }
+
+.drawer__body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.noscript {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  margin: 0;
+  background: var(--surface);
+  color: var(--ink-2);
+}
+
+/* ------------------------------------------------------------ 动效降级开关
+   「设置 → 减少动画」与系统偏好走同一条路径：一律只把时长压到近零，
+   不改变状态机，避免降级后交互逻辑出现分支。 */
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    transition-duration: 1ms !important;
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
+.reduce-motion *, .reduce-motion *::before, .reduce-motion *::after {
+  transition-duration: 1ms !important;
+  animation-duration: 1ms !important;
+  animation-iteration-count: 1 !important;
+}

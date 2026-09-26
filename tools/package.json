@@ -1,0 +1,12 @@
+{
+  "name": "homework-board",
+  "version": "1.0.0",
+  "private": true,
+  "description": "作业发布系统：课表与作业布置情况预览 + 便捷 Tag 拖拽布置",
+  "type": "module",
+  "scripts": {
+    "start": "node tools/serve.mjs",
+    "build:exe": "node tools/build-exe.mjs",
+    "selftest": "node tools/selftest.mjs"
+  }
+}

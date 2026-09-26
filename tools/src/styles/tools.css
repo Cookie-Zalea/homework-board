@@ -1,0 +1,183 @@
+/* ==========================================================================
+   tools.css —— 一区：功能区
+
+   三块工具（字号 / 快捷 / 历史）自上而下，中间用细分隔线分开。
+   分隔线刻意压得很轻：这几块是同一栏里的并列工具，不是三个独立面板，
+   划得太重会让左栏看起来像三级菜单。
+
+   容器的骨架（.tools-body / .info-foot / .info-row）在 layout.css。
+   ========================================================================== */
+
+.tools-block + .tools-block {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line-soft);
+}
+
+.tools-block__title {
+  margin-bottom: 8px;
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  color: var(--ink-3);
+}
+
+.tools-stack {
+  display: grid;
+  gap: 7px;
+}
+
+/* 工具下面的说明文字。它要能替代猜测（选中的是哪枚 Tag、上次什么时候布置的），
+   所以给足行距，让它读起来是一句话而不是一行标签。 */
+.tools-note {
+  margin-top: 7px;
+  font-size: var(--fs-micro);
+  line-height: 1.55;
+  color: var(--ink-3);
+}
+
+/* 字号调大之后，「布置给全部课程」这类长按钮在窄栏里会折行。
+   .btn 是固定高度，折行就会把字压出按钮外，所以这里放开高度。
+   .btn 自己已经有一个跟着字号的 min-height，这里只是把 height 让开。 */
+.tools-stack .btn {
+  height: auto;
+  padding-top: 5px;
+  padding-bottom: 5px;
+  line-height: 1.35;
+}
+
+/* ---------------------------------------------------------- 历史记录列表 */
+
+.hist-note {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--line-soft);
+  font-size: var(--fs-micro);
+  line-height: 1.6;
+  color: var(--ink-3);
+}
+
+.hist-empty {
+  padding: 20px 16px;
+  font-size: var(--fs-sm);
+  line-height: 1.7;
+  color: var(--ink-3);
+}
+
+.hist-list { display: grid; }
+
+.hist-item {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--line-soft);
+  transition: background-color var(--t-fast) var(--ease);
+}
+.hist-item:hover { background: var(--surface-2); }
+.hist-item:last-child { border-bottom: 0; }
+
+/* 停在当前这一条上：整行压深一档，不用强调色 —— 它是「你在这儿」，
+   不是「这里有错」。 */
+.hist-item.is-current { background: var(--surface-2); }
+
+.hist-item__main { min-width: 0; }
+
+.hist-item__head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+
+.hist-item__time {
+  flex: none;
+  font-size: var(--fs-micro);
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.hist-item__label {
+  min-width: 0;
+  font-size: var(--fs-sm);
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 那一刻板子上有什么。按课程分段，课程色沿用课程格那一套变量 ——
+   颜色只有 data/subjects.js 一个来源。 */
+.hist-item__summary {
+  margin-top: 4px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  font-size: var(--fs-micro);
+  color: var(--ink-2);
+}
+
+.hist-sub {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  min-width: 0;
+}
+
+.hist-sub__glyph {
+  flex: none;
+  font-weight: 600;
+  color: var(--hue, var(--ink-3));
+}
+
+.hist-item__blank { color: var(--ink-3); }
+
+.hist-item__restore {
+  flex: none;
+  height: 24px;
+  padding: 0 9px;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  color: var(--ink-2);
+  font-size: var(--fs-micro);
+  white-space: nowrap;
+  transition: background-color var(--t-fast) var(--ease),
+              border-color     var(--t-fast) var(--ease),
+              color            var(--t-fast) var(--ease);
+}
+.hist-item__restore:hover {
+  border-color: var(--line-hard);
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.hist-item__current {
+  flex: none;
+  padding: 0 8px;
+  font-size: var(--fs-micro);
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+
+/* ------------------------------------------------------------ 窄屏适配
+   一区在窄屏横过来（容器规则在 layout.css）。三块工具并排之后，
+   竖排时那套「一条分隔线 + 上下留白」就不成立了 —— 折行的地方本来就
+   有行距，再来一条横线只会把并排的几块切开成上下两组。
+   这些规则必须写在这个文件里：layout.css 比本文件先加载，同优先级的
+   规则放在那边会被上面的定义盖掉（媒体查询不增加优先级）。 */
+
+@media (max-width: 760px) {
+  .tools-block { flex: 0 1 auto; min-width: 0; }
+
+  .tools-block + .tools-block {
+    margin-top: 0;
+    padding-top: 0;
+    border-top: 0;
+  }
+
+  .tools-block__title { margin-bottom: 6px; }
+
+  /* 横排里按钮按文字宽，不铺满整行 */
+  .tools-stack .btn { width: auto; }
+
+  .tools-note { margin-top: 5px; }
+}

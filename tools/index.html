@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>作业发布系统</title>
+<link rel="icon" href="src/assets/icon.ico">
+<link rel="stylesheet" href="src/styles/base.css">
+<link rel="stylesheet" href="src/styles/layout.css">
+<link rel="stylesheet" href="src/styles/tools.css">
+<link rel="stylesheet" href="src/styles/board.css">
+<link rel="stylesheet" href="src/styles/tags.css">
+<link rel="stylesheet" href="src/styles/keypad.css">
+<link rel="stylesheet" href="src/styles/settings.css">
+</head>
+<body>
+
+<!--
+  三区固定结构（参考图片1）：
+    一区  功能区（字号 / 快捷 / 历史 + 软件信息）  左侧通栏
+    二区  课表与作业布置情况预览    右上，主要信息查看区
+    三区  便捷 Tag                右下
+  二区内部为 2×3 六个课程区域（参考图片2）。
+-->
+
+<div class="app" id="app">
+  <section class="zone zone--info"  id="zone-info"  aria-label="功能区"></section>
+  <div class="stack">
+    <section class="zone zone--board" id="zone-board" aria-label="课表与作业布置情况预览"></section>
+    <section class="zone zone--tags"  id="zone-tags"  aria-label="便捷 Tag"></section>
+  </div>
+</div>
+
+<div id="overlay-root"></div>
+
+<noscript><p class="noscript">本软件需要启用 JavaScript 才能运行。</p></noscript>
+
+<script type="module" src="src/main.js"></script>
+</body>
+</html>

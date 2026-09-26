@@ -1,0 +1,298 @@
+/* ==========================================================================
+   board.css —— 二区：2×3 课程区域 + 作业布置状态
+   结构对齐参考图片2：左右两个三行表格块，中间一条窄分隔带。
+
+   课程颜色只以两种形式出现，避免变成六张彩色大卡片：
+     1. 每格左侧 5px 色条 —— 课程识别的固定标识，任何状态下都在
+     2. 格内作业 Tag 的淡色底 + 深色字 —— Tag 与课程的视觉关联
+   格子本体始终是白纸，所以「出现颜色」本身就等于「已布置」。
+   ========================================================================== */
+
+.board-body {
+  flex: 1;
+  min-height: 0;
+  padding: 10px;
+  display: flex;
+}
+
+.board {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 var(--gutter);
+  --gutter: clamp(14px, 2.2%, 26px);
+}
+
+/* 表格块：外框 + 三条等分格，行线在块内对齐，两块之间自然对齐 */
+.board-block {
+  display: grid;
+  grid-template-rows: repeat(3, minmax(0, 1fr));
+  min-height: 0;
+  border: 1px solid var(--line-hard);
+  border-radius: var(--radius);
+  background: var(--surface);
+  overflow: hidden;
+  /* 课程大字的字号按「格子高的一半」定，所以这里要有一个可查询高度的容器。
+     容器挂在这一层而不是课程格上：cqh 量的是容器的**内容盒**，本块没有内边距，
+     内容盒就是「三格 + 两条行线」，一格恰好是它的三分之一；挂在格上的话量到的
+     是格内去掉上下 9px 内边距之后的高度，那个差值随格子高低而变，同一档在
+     窗口大小不同时就不一样大了。
+     这里不会绕成死循环：块的高来自 .board 的行、格的高来自块的 repeat(3,1fr)，
+     都与内容无关，contain: size 没有切断任何「被内容撑开」的路径。 */
+  container-type: size;
+}
+
+/* ------------------------------------------------------------- 课程区域 */
+
+/* 科目名 | 作业条目，两栏并排。
+   条目必须和科目名同行，不能压在它下面：科目大字占掉半格高（--glyph-half），
+   上下排的时候条目只能用到剩下的那半格，而「0.9 × 科目大字」的条目连一个都
+   放不下 —— 大/特大档会直接被截成一条空白。横向排开之后条目拿到的是整格高度，
+   科目名让出的是宽度，而宽度是够的（一格约 535px 宽）。
+   拖动过程中格子高矮不变，所以这条不涉及 cqh 的反馈回路。 */
+.course-cell {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  min-height: 0;
+  padding: 9px 10px 9px 15px;
+  background: var(--surface);
+  transition: background-color var(--t-base) var(--ease),
+              box-shadow       var(--t-fast) var(--ease);
+}
+.course-cell + .course-cell { border-top: 1px solid var(--line); }
+
+/* 课程色条：色相来自 data/subjects.js，这里只消费变量 */
+.course-cell::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 5px;
+  background: var(--hue);
+}
+
+.course-cell:hover { background: #fafbfc; }
+
+/* 放置目标高亮：用 inset 阴影而不是边框，避免拖拽时产生任何布局位移 */
+.course-cell.is-drop-target {
+  background: var(--drop);
+  box-shadow: inset 0 0 0 2px var(--hue);
+}
+
+/* 已点选 Tag 时，课程格进入可点击布置状态 */
+.course-cell.is-armed { cursor: copy; }
+.course-cell.is-armed:hover { background: var(--drop); }
+
+.course-cell:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+}
+
+/* 科目名与计数竖着摞成一栏。计数不参与那一行的宽度分配：格子横向本来就不宽，
+   而大/特大档的科目大字一个就占掉 85px，再让「2 项」在行里占掉 45px，
+   条目的名字就只够显示一个字。摞起来等于白捡回 55px。 */
+.course-cell__lead {
+  display: grid;
+  justify-items: start;
+  gap: 1px;
+}
+
+.course-cell__glyph {
+  /* 唯一一处不消费 --fs-* 的字号：课程格上这个字要显眼，比正文大得多。
+     它的尺寸按科目框的高度算，不按 px —— cqh 的 1% 是所在容器（.board-block，
+     见上）内容盒的高，一格是那块的三分之一，两个常数都收在 base.css 的
+     --glyph-half / --glyph-scale 里。
+     挂容器查询而不是每一处以 px 写死的好处：窗口拉大、进全屏、窄屏折行，
+     这个字都跟着格子一起变，永远占住框高的同一个比例。 */
+  font-size: var(--glyph-size);
+  font-weight: 600;
+  line-height: 1.1;
+  color: var(--ink);
+  letter-spacing: .02em;
+}
+
+.course-cell__count {
+  font-size: var(--fs-micro);
+  color: var(--ink-3);
+  white-space: nowrap;
+  transition: color var(--t-base) var(--ease);
+}
+.course-cell__count.is-on { color: var(--ink-2); font-weight: 600; }
+
+/* 作业槽位：换行排布；条目过多时在该区域内滚动，不隐藏任何内容。
+   撑满整格高度（align-self: stretch），条目才有和科目大字一样高的可用空间；
+   条目在中间那一列里按「一行一条」横着排下去，所以 align-content 要居中，
+   一条的时候它和科目名在视觉上是一条线，而不是贴着格顶。
+   safe 是必须的：不加的话内容溢出时居中会把**第一行**顶到滚动区外面去，
+   滚不回来 —— 加了 safe，放不下就退化成顶对齐，至少每一条都够得着。
+   前面那行 flex-start 是给不支持 safe 的浏览器兜底用的。 */
+.course-cell__slots {
+  align-self: stretch;
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  align-content: safe center;
+  gap: 5px;
+  min-height: 0;
+  padding-right: 2px;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+/* ------------------------------------------------------- 格内作业 Tag */
+
+/* 颜色全部继承所在课程格：--tint / --deep / --edge 都来自 .course-cell，
+   所以同一条「必刷题」在语上是红的、在数上是蓝的 —— 这是布局的结果，
+   不是给 Tag 配了颜色。
+
+   字号 = 0.9 × 科目大字 × --fit，比科目名稍小一点。三区那枚 Tag 是定值
+   （2.484cqh ≈ 20px，不随四档字号走，见 tags.css），所以两者的大小关系逐档不同：
+   紧凑档条目反而比 Tag 小，标准档 1.3 倍，特大档 2.8 倍。「拖进格子之后变大」
+   那一段由 panel-board.js 的 flyGhost 按实测倍数补上。
+
+   --fit 是「这一格装不下就自己缩小」的系数（取值范围 0~1，正常就是 1）：
+   由 panel-board.js 的 fitCell 按实际布局算出来，写在 .course-cell__slots 上，
+   只影响挤的那一格。缩小之后不能靠滚动条藏内容 —— 那是这一条的由来。
+
+   上下留白刻意压得很薄（.25em + line-height 1.2 = 整个盒子 1.75em）：条目要
+   和科目大字挤在同一行里，而特大档的条目字有 77px，按旧值 .42em/1.25
+   （2.09em ≈ 160px）比整格还高，会被裁成一条空白。压到 1.75em ≈ 134px 才装得下。
+   横向留白不动 —— 那边不缺地方。
+
+   尺寸全部写成 em（旧值 ÷ 12px），跟着这个字号放大，条目的形状不变。 */
+.asg {
+  display: inline-flex;
+  align-items: center;
+  gap: .33em;
+  max-width: 100%;
+  padding: .25em .4em .25em .6em;
+  border: 1px solid var(--edge);
+  border-radius: var(--radius);
+  background: var(--tint);
+  color: var(--deep);
+  font-size: calc(var(--glyph-size) * .9 * var(--fit, 1));
+  line-height: 1.2;
+  white-space: nowrap;
+  transform-origin: left center;   /* 入场时从落点那一侧长出来，见 chip-in */
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+  transition: background-color var(--t-fast) var(--ease),
+              border-color     var(--t-fast) var(--ease),
+              opacity          var(--t-fast) var(--ease);
+}
+
+/* 正被拖走：留在原位变淡，提示「这一条正在被搬动」 */
+.asg.is-dragging { opacity: .34; }
+
+/* 名字让步，页码不让步。
+   .asg 是 nowrap + max-width:100%，放不下时靠省略号收尾。如果名字和页码是
+   同一条文本，被省略号吃掉的正好是末尾的页码 —— 而「必刷题」人人都知道，
+   「第几页」才是这条作业唯一的新信息。拆成两个节点后，宽度不够时缩的是
+   .asg__label（flex 默认 1 1 auto，可压缩），页码这一段 flex: none 恒定不缩。
+   没页码时节点带 hidden 收起来，见 panel-board.js 的 syncChipText。 */
+.asg__label { overflow: hidden; text-overflow: ellipsis; }
+
+/* 窄到连一个省略号都放不下时，名字整个收起来，只留页码（读作「-200页」）。
+   「半个字」比没有名字更难认：340px 的一格放一条 12 字的名字 + 三位页码，
+   名字那段只剩 4px（实测），屏幕上是竖着切掉半笔，看着像个错字。既然页码才是
+   这条作业唯一的新信息（名字人人都知道），那就让名字先走。
+   由 panel-board.js 的 fitCell 在缩到下限之后判定并加上，见那边的 halfGlyph /
+   canDropName；名字同时写进 title，鼠标停上去还看得见。
+   display: none 之后它不再是 flex 项，那一段的 gap 也跟着没有 —— 不用另外补。 */
+.asg.is-nameless .asg__label { display: none; }
+
+.asg__page { flex: none; }
+
+/* 撤下键封顶：它是**控件**不是文字，不需要跟着字号一起长到 96px。
+   它是 flex: none，就算 opacity 0 也一直占着宽度 —— 特大档下 1.25em 是 96px，
+   占掉条目的四分之一，而条目横向本来就不够用（科目大字还要 85px）。封在 34px
+   （触摸目标下限）之后，大档下条目的名字从 2 个字回到 4 个字。
+   它平时是透明的，所以封顶不改任何看得见的排版，只在悬停时体现。 */
+.asg__remove {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: min(1.25em, 34px);
+  height: min(1.25em, 34px);
+  border-radius: 2px;
+  color: currentColor;
+  opacity: 0;
+  transition: opacity var(--t-fast) var(--ease),
+              background-color var(--t-fast) var(--ease);
+}
+.asg:hover .asg__remove,
+.asg:focus-within .asg__remove { opacity: .6; }
+.asg__remove:hover { opacity: 1; background: rgba(20,24,29,.10); }
+.asg__remove:focus-visible { opacity: 1; }
+
+/* 撤下键里的叉自己带尺寸（iconClose(10) 写的是 px），由这里接管并跟着条目放大。
+   不接管的话，特大档下条目字有 78px，叉还是 10px 的一个点。
+   封顶跟着上面那个按钮一起封：不然按钮封住了、叉还按 em 长，会顶出按钮外。 */
+.asg__icon { width: min(.83em, 22px); height: min(.83em, 22px); }
+
+/* 落位前先以透明状态占好位置，等拖影飞到位再揭示，避免任何位置的跳变 */
+.asg.is-pending { opacity: 0; }
+
+/* 入场：从「三区那枚 Tag 的大小」长到条目自己的大小。
+   transform-origin 放左边：它是从落点那一侧长出来的，不是从中间胀开。
+
+   --enter-scale 由 panel-board.js 的 reveal 在下这一帧现读现写，值就是
+   「Tag 字号 ÷ 条目字号」。为什么必须是现读的：
+     · 条目字号 = 0.9 × 科目大字 × --fit，里面叠着每一格自己的 --fit；
+     · Tag 的字号固定成 2.484cqh 之后，四档下的比例各不同（0.85 / .59 / .41 / .28），
+       从前那个写死的 .83 只在「标准」档对。
+   所以缩放**不除以 --fit** —— 现读的条目字号里已经含了它。
+
+   拖拽落位那一路不走这里：变大已经由拖影的落点层在飞行途中做完（见 flyGhost
+   与 tags.css 的 .drag-ghost__arrival），reveal 会把 --enter-scale 钉成 1，
+   条目只做淡入 + 落位，不再二次放大 —— 两段一起长就看不出是哪一段在长了。
+   取不到值（三区还没有 Tag 之类）时退回 .83，也就是「标准」档那个老值。 */
+.asg.is-entering { animation: chip-in var(--t-base) var(--ease) both; }
+
+@keyframes chip-in {
+  from { opacity: 0; transform: translateY(-3px) scale(var(--enter-scale, .83)); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* 重复布置同一个 Tag 时，让已有的那枚轻闪一下，说明「这里已经有了」 */
+.asg.is-flash { animation: chip-flash 460ms var(--ease); }
+
+@keyframes chip-flash {
+  0%, 100% { box-shadow: 0 0 0 0 transparent; }
+  30%      { box-shadow: 0 0 0 3px var(--edge); }
+}
+
+/* ------------------------------------------------------------ 窄屏：给大字封顶
+   上面那套「大字占格高一半」是按一块 535px 宽的格子定的。340px 下格子只有
+   165px 宽，科目名和作业左右排开之后，留给作业的只有 100px —— 而一条带页码
+   的作业是「0.9 × 科目大字」，特大档下光页码就有 190px，整条会被
+   .course-cell__slots 的 overflow-x 裁掉一截，连页码都看不见。页码不让步
+   （见 .asg__page 那段），所以让步的是大字本身。
+
+   封的是 --glyph-size 这一个令牌，不是分别去压两个消费者：科目大字和格内
+   条目都从它乘出来，改这一处，0.9 那个比例在窄屏照样成立，三区的 Tag 也照
+   同一条上限走（tags.css 读 --glyph-cap），「拖进去变大」在窄屏四档都在。
+
+   上限是绝对的 px（--glyph-cap，见 base.css），不乘 --fs-scale：一格多宽是
+   屏幕定的，再乘 1.15 又排不下了。代价是窄屏下四个字号档在二区看起来一样大
+   —— 一屏六门课的地方本来就摆不下四档字号，而一区的正文、按钮仍然跟着档位走。 */
+@media (max-width: 760px) {
+  :root {
+    --glyph-size: min(calc(var(--glyph-half) * var(--glyph-scale)), var(--glyph-cap));
+  }
+
+  /* 100px 一栏，横向每一寸都要省：课程格左边那条 5px 色条不需要 10px 的间距，
+     科目名和作业之间也不需要 10px。省下的 10px 就是名字能多显示一个字。 */
+  .course-cell { padding: 8px 10px 8px 11px; gap: 7px; }
+
+  /* 条目自己也收一收：横向留白和间距各让一步，页码一个字不少地留住。 */
+  .asg { padding: .25em .35em .25em .5em; gap: .25em; }
+}

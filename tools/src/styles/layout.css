@@ -1,0 +1,253 @@
+/* ==========================================================================
+   layout.css —— 三区骨架（一区 / 二区 / 三区）
+   结构对齐参考图片1：左侧一区通栏，右侧上下切分二区与三区。
+   分隔一律用 1px 实线，不加投影、不加圆角、不留沟槽。
+   ========================================================================== */
+
+.app {
+  height: 100dvh;
+  display: grid;
+  grid-template-columns: minmax(188px, 22.5%) 1fr;
+  background: var(--bg);
+}
+
+/* 二区与三区摞在一起的那一列。
+   它同时是三区 Tag 字号的量尺：Tag 的大小写成「本列高度的百分之几」（见
+   tags.css），所以窗口一变高，Tag 跟着大一点，托盘和课表看着仍是同一套尺度。
+   注意它**只跟本列的高度有关，不跟 --glyph-scale 走** —— 三区 Tag 不随四档
+   字号变化，那个百分比是个定值。
+
+   这里不会绕成死循环：本列的高来自 .app 的 100dvh，两个 zone 的行是 fr，
+   都与内容无关，contain: size 没有切断任何「被内容撑开」的路径。
+   窄屏下这条不成立 —— 那时行改成由内容决定，继续 contain: size 会把整列
+   塌成 0，所以窄屏那道 media query 里要改回 normal。 */
+.stack {
+  display: grid;
+  grid-template-rows: minmax(0, 2.2fr) minmax(0, 1fr);
+  min-width: 0;
+  min-height: 0;
+  container-type: size;
+}
+
+.zone {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  background: var(--surface);
+}
+
+.zone--info  { border-right: 1px solid var(--line-hard); }
+.zone--board { border-bottom: 1px solid var(--line-hard); }
+
+/* 三区整体压深一档：与二区在「表面」层面就分开，不必靠边框强调 */
+.zone--tags  { background: var(--surface-2); }
+
+/* -------------------------------------------------------- 面板标题条
+   只承担定位作用：说明这一区是什么。不做大标题、不做图标装饰。 */
+
+/* 高度跟着字号走：字号上调之后 30px 会把标题挤扁。
+   flex 子项默认 min-width: auto，长标题在窄栏里宁可撑破也不缩，所以标题那条
+   要显式放开收缩并允许省略号。 */
+.panel-head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: calc(30px * var(--fs-scale));
+  padding: 0 12px;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--line);
+}
+.zone--tags .panel-head { background: var(--surface-3); }
+
+.panel-head__title {
+  min-width: 0;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.panel-head__note {
+  margin-left: auto;
+  font-size: var(--fs-micro);
+  color: var(--ink-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 面板页脚：与标题条同为一条细带，只是挂在下沿。目前只有全屏一个住户，
+   靠右摆 —— 它是视图开关，不该占着标题条上最显眼的位置（用户要求搬到
+   「二区下方」）。二区之外的地方不用它；三区下面就是窗口底边，再多一条带子
+   只是白占地方。 */
+.panel-foot {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 4px 12px;
+  background: var(--surface-2);
+  border-top: 1px solid var(--line);
+}
+
+/* 页脚上的小按钮。比通用 .btn 矮一档，不做强调色 —— 它是个视图开关，
+   不是主要操作。
+   高度跟着字号走：里面的字是 --fs-micro，字号上调后会顶破写死的 22px。 */
+.head-btn {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: calc(22px * var(--fs-scale));
+  padding: 0 8px;
+  border: 1px solid var(--line-hard);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--ink-2);
+  font-size: var(--fs-micro);
+  transition: border-color     var(--t-fast) var(--ease),
+              background-color var(--t-fast) var(--ease),
+              color            var(--t-fast) var(--ease);
+}
+.head-btn:hover { border-color: #9ba2ab; color: var(--ink); }
+.head-btn__icon { flex: none; color: var(--ink-3); transition: color var(--t-fast) var(--ease); }
+.head-btn:hover .head-btn__icon { color: var(--ink-2); }
+
+/* ------------------------------------------------------ 二区独立全屏
+   只有作业安排表进全屏：课程布局、格内作业、Tag 状态都不变，
+   只是画布变大。所以这里只做「撑满 + 放大字号 + 放宽留白」三件事，
+   不重排任何结构。 */
+
+.zone--board:fullscreen,
+.zone--board.is-fullscreen {
+  background: var(--surface);
+  border-bottom: 0;
+}
+
+.zone--board:fullscreen .board-body,
+.zone--board.is-fullscreen .board-body { padding: 18px; }
+
+/* 页脚也跟着让开同样的留白，全屏下这条带子与课程表左右对齐 */
+.zone--board:fullscreen .panel-foot,
+.zone--board.is-fullscreen .panel-foot { padding: 6px 18px; }
+
+.zone--board:fullscreen .course-cell,
+.zone--board.is-fullscreen .course-cell { padding: 14px 16px 14px 21px; }
+
+/* 全屏下课程大字不再单独写一条字号。它按格子高算（board.css 的 cqh），
+   全屏时格子本来就高三倍，字自然跟着大 —— 而且仍然正好是半格高，与
+   窗口里是同一个比例。写死一个 px 反而会在两种画布上各错一次。 */
+
+/* -------------------------------------------------------------------- 一区
+   一区是功能区：上半是可操作的几组工具，下半压缩保留软件信息与设置入口。
+   软件信息只是「这是哪个版本、谁做的」，不需要占掉半栏 —— 它挪到栏底，
+   由一条细分隔线与工具区分开，三个值仍然一眼可见。 */
+
+.tools-body {
+  flex: 1;
+  min-height: 0;
+  padding: 14px;
+  /* 工具区多了以后，矮窗口下会顶出去。这里自己滚，别把软件信息挤出屏幕。 */
+  overflow-y: auto;
+}
+
+/* 软件信息：压缩后固定在栏底 */
+.info-foot {
+  flex: none;
+  padding: 12px 14px 14px;
+  border-top: 1px solid var(--line-soft);
+}
+
+.info-id { padding-bottom: 10px; }
+
+.info-id__name {
+  font-size: var(--fs-base);
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--ink);
+  word-break: break-word;
+}
+
+.info-list {
+  display: grid;
+  gap: 5px;
+  padding-bottom: 11px;
+}
+
+/* 标签列宽跟着字号走。写死 52px 的话，字号上调之后「开发者」这种三字标签
+   会被挤成两行 —— settings.css 里那处字段标签早就是这么算的。 */
+.info-row {
+  display: grid;
+  grid-template-columns: calc(52px * var(--fs-scale)) 1fr;
+  gap: 8px;
+  align-items: baseline;
+}
+
+.info-row__label { font-size: var(--fs-micro); color: var(--ink-3); }
+
+.info-row__value {
+  font-size: var(--fs-micro);
+  color: var(--ink-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.info-row__value.is-unset { color: var(--ink-3); }
+
+/* ------------------------------------------------------------ 窄屏适配
+   核心结构关系不变，只是把「左右」改成「上下」。 */
+
+@media (max-width: 760px) {
+  body { overflow: auto; }
+
+  .app {
+    height: auto;
+    min-height: 100dvh;
+    grid-template-columns: 1fr;
+  }
+
+  /* 窄屏这一列改由内容决定高度，contain: size 会把它的高当成 0 处理，
+     整列就没了。三区 Tag 的字号也跟着退回字号阶梯（见 tags.css）。 */
+  .stack {
+    grid-template-rows: none;
+    container-type: normal;
+  }
+
+  .zone--info {
+    border-right: 0;
+    border-bottom: 1px solid var(--line-hard);
+  }
+
+  /* 一区在窄屏横过来：三块工具排成一行，放不下自动折行。
+     竖着堆的话一区会有将近 460px 高 —— 屏幕一共才 720px，课表直接被
+     挤到屏幕外面去，得先翻过一整屏工具才看得到作业。横排之后一区只有
+     原来一半高。
+     .tools-* 自己的窄屏规则写在 tools.css 里：那个文件加载得更晚，
+     同优先级的规则放在这里会被它盖掉。 */
+  .tools-body {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 12px 18px;
+    overflow: visible;      /* 竖排布局里一区不再是一条固定高的窄栏 */
+  }
+
+  /* 软件信息在窄屏也横过来，省下一行的高度 */
+  .info-foot { padding: 10px 14px 12px; }
+  .info-list { grid-auto-flow: column; justify-content: start; gap: 14px; padding-bottom: 10px; }
+
+  /* 特大档在窄屏封顶。
+     不是为了修正确性，是「特大」在一条 340px 宽的栏里会把二区的课程格
+     压得没有高度可用。这里仍然比「大」大，用户的选择没有被推翻。 */
+  :root.fs-xlarge { --fs-scale: 1.15; }
+
+  .zone--board { min-height: 62vh; }
+  .zone--tags  { min-height: 128px; }
+
+  .panel-head__note { display: none; }
+}

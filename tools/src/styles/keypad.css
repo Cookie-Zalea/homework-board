@@ -1,0 +1,110 @@
+/* ==========================================================================
+   keypad.css —— 页码用的内置数字键盘
+
+   贴在 Tag 上方浮出的一个小气泡，见 views/keypad.js 里的取舍说明。
+   尺寸全部按触摸目标定，不跟 --fs-scale 走：手指不挑字号，只挑键的大小。
+   ========================================================================== */
+
+.keypad {
+  position: fixed;          /* left / top 由 JS 按锚点算，量的是视口坐标 */
+  left: 0;
+  top: 0;
+  z-index: 702;             /* 抽屉 701 之上、拖影 900 之下 */
+  width: 208px;
+  padding: 8px;
+  border: 1px solid var(--line-hard);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-float);
+  opacity: 0;
+  transform: translateY(4px);   /* 从 Tag 那一侧升上来 */
+  pointer-events: none;
+  transition: opacity   var(--t-fast) var(--ease),
+              transform var(--t-fast) var(--ease);
+}
+
+/* 关着的时候还带着 inert（keypad.js），所以这里只管画出来 */
+.keypad.is-open {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.keypad__head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+  padding: 0 2px;
+}
+
+/* 名字可以被省略号截短，右边的当前值与「完成」不会被挤走 */
+.keypad__title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--fs-micro);
+  color: var(--ink-2);
+}
+
+.keypad__value {
+  flex: none;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+.keypad__value.is-empty { font-weight: 400; color: var(--ink-3); }
+
+.keypad__done {
+  flex: none;
+  /* 键面是固定的触摸目标，但这一条在标题行里、旁边就是会缩放的文字，
+     所以跟着字号走，不然字号上调后「完成」会被压出按钮外。 */
+  min-height: calc(22px * var(--fs-scale));
+  padding: 0 7px;
+  border-radius: 2px;
+  color: var(--focus);
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  transition: background-color var(--t-fast) var(--ease);
+}
+.keypad__done:hover { background: var(--surface-2); }
+
+.keypad__grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+
+.keypad__key {
+  height: 44px;             /* 触摸目标下限 */
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  color: var(--ink);
+  font-size: var(--fs-lg);
+  font-variant-numeric: tabular-nums;
+  transition: background-color var(--t-instant) var(--ease),
+              border-color     var(--t-instant) var(--ease),
+              color            var(--t-instant) var(--ease),
+              transform        var(--t-instant) var(--ease);
+}
+.keypad__key:hover  { background: var(--surface-3); border-color: var(--line-hard); }
+.keypad__key:active { transform: translateY(1px); }
+
+/* 数字要大要显眼，功能键退到后面去 —— 四行里只有最后一行不是数字 */
+.keypad__key--util {
+  font-size: var(--fs-micro);
+  color: var(--ink-2);
+}
+
+/* 空页码时没什么可清、可退的。禁用态做得安静些，别看着像坏掉的键 */
+.keypad__key:disabled {
+  color: var(--ink-3);
+  border-color: var(--line-soft);
+  background: var(--surface-2);
+  cursor: default;
+  transform: none;
+}

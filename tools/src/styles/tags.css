@@ -1,0 +1,412 @@
+/* ==========================================================================
+   tags.css —— 三区：便捷 Tag 与拖影
+
+   三区与二区的区分：
+     二区是白纸表格（有格线、有课程色条），三区是灰底工具条，
+     格内作业带课程色，三区的 Tag 一律中性色 —— 因为 Tag 是通用的，
+     落到哪门课才染上那门课的颜色。这个「由中性变有色」的转变
+     本身就是「Tag → 课程作业」的视觉关联。
+
+   本区同时是「撤销」的落点：格内作业拖回来，本区亮起接收态。
+   ========================================================================== */
+
+/* 三区里面所有东西的字号都从这里定：Tag、新建入口、新建输入行。
+   下面的尺寸一律写成 em，所以「Tag 变大」是一处改、处处跟着。
+
+   **这个字号不随一区的四档字号变化**（用户要求：「三区的 tag 大小不要随字号
+   变化而变化」）。固定写成本列高度的 2.484%：本列内容盒 805px × 2.484%
+   = 20.0px @1440×900。
+
+   2.484 是用户点着数定下来的：先是「3区 tag 可以再缩小一点」，然后是
+   「三区的 tag 20px 就差不多了」。所以这个百分比就是「20px 换算到本列高度」
+   的结果，不是一个审美系数 —— **要调大小就改这一个数**，它跟四档无关，
+   改完四档一起变。想按 px 定：`目标 px ÷ 805 × 100`。
+
+   本列（.stack，container-type 见 layout.css）是被当成量尺用的 —— 科目大字的
+   容器 .board-block 在二区里面，这里够不着，只能拿本列的高度换算。从前这里
+   写的是 calc(8.07cqh * var(--glyph-scale))：
+
+     科目大字 = 17.3cqh(块) × --glyph-scale     块内容盒 500px @1440×900
+     → 17.3 × 500/805 = 10.75cqh(本列)          本列内容盒 805px
+     → ×0.75 = 8.07cqh(本列)，再乘 --glyph-scale
+
+   放弃那条比例的理由是默认 Tag 有十几枚 —— 跟着档走的话，「特大」下 Tag 高
+   151px、整个托盘要滚 11.8 屏（实测），而托盘是天天要点的地方。科目大字是
+   「一眼扫过」的信息，Tag 是「伸手去够」的控件，不必同进退。
+
+   缩到 20px 之后托盘一屏就装得下（15 枚的 scrollHeight ÷ clientHeight = 1.00，
+   实测，也就是没有溢出）；而且四档的条目都比 20px 大（1.17 / 1.70 / 2.46 / 3.55
+   倍），所以「拖进去变大」四档一律成立 —— 早先按 27.2px 时紧凑档是反过来的
+   （条目 24.8px 比 Tag 小），这个代价随着这次缩小自己消失了。两个读数都在
+   自检的「字号比例」「三区」两行里，README 的取舍一节也记着。
+
+   窄屏下本列的高度改成由内容决定，cqh 会变成循环引用（Tag 越大 → 三区越高
+   → Tag 越大），所以那边不用这个数，改为按 --glyph-cap 算，见文件末尾
+   —— 那一个本来就跟四档无关。 */
+.tags-body {
+  flex: 1;
+  min-height: 0;
+  font-size: 2.484cqh;
+  padding: calc(12px * var(--fs-scale));
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  gap: .67em;                 /* 行距要容得下 .tag__page 的触摸热区，跟着 Tag 走 */
+  overflow-y: auto;
+  transition: background-color var(--t-base) var(--ease),
+              box-shadow       var(--t-fast) var(--ease);
+}
+
+/* 接收从格内拖回来的作业。拖 Tag 本身回来没有意义，那时不让它亮
+   （is-dragging-tag 由三区在开始拖 Tag 时挂上）。 */
+.tags-body.is-drop-target:not(.is-dragging-tag) {
+  background: var(--surface-3);
+  box-shadow: inset 0 0 0 2px var(--line-hard);
+}
+
+/* ---------------------------------------------------------------- 单个 Tag
+   结构：抓手+名称 是可点选的按钮，页码是另一个按钮（点开内置数字键盘），
+   删除键只在自建 Tag 上。三块都是按钮而没有嵌套关系 —— 按钮里不能放按钮，
+   而且并列的话各自有各自的 guard，点选与拖拽都能绕开它们。 */
+
+/* 尺寸全部写成 em（旧值 ÷ 12px）：字号是三区定的大号（见 .tags-body），
+   框、间距、圆角之外的一切都跟着它放大，Tag 的形状不变。 */
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: .33em;
+  min-height: 2.33em;
+  padding: 0 .75em 0 .58em;
+  border: 1px solid var(--line-hard);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--shadow-chip);
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;          /* 触屏上也走 pointer 拖拽，不被滚动抢走 */
+  transition: transform    var(--t-fast) var(--ease),
+              box-shadow   var(--t-fast) var(--ease),
+              border-color var(--t-fast) var(--ease),
+              background-color var(--t-fast) var(--ease),
+              opacity      var(--t-fast) var(--ease);
+}
+
+.tag:hover {
+  transform: translateY(-1px);
+  border-color: #98a0a9;
+  box-shadow: var(--shadow-chip-hover);
+}
+.tag:active { transform: translateY(0); }
+
+.tag__grab {
+  display: inline-flex;
+  align-items: center;
+  gap: .58em;
+  height: 100%;
+  color: inherit;
+  cursor: grab;
+}
+
+/* 抓手图标自己写死 6×10 px，尺寸由这里接管（SVG 的 width/height 属性会被
+   CSS 盖掉）。6/12 与 10/12：和旧版在 12px 字号下的观感一致，只是跟着 Tag 放大。 */
+.tag__grip {
+  flex: none;
+  width: .5em;
+  height: .83em;
+  color: #a9b0b8;
+  transition: color var(--t-fast) var(--ease);
+}
+.tag:hover .tag__grip { color: var(--ink-3); }
+
+.tag__label { white-space: nowrap; }
+
+/* ------------------------------------------------------------ 页码
+   显示上就是 Tag 名称的一部分：必刷题-20页。
+   没填时是「必刷题-页」，中间留一条虚线下划线 —— 像卷子上的填空题，
+   一看就知道可以点进去写。填了之后下划线隐去，变成完整的一个名字。 */
+
+.tag__page-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+  color: var(--ink-3);
+}
+
+.tag__dash { color: var(--ink-3); }
+.tag__unit { color: var(--ink-3); }
+
+/* 宽度跟着位数走（--page-ch 由视图按当前页码设），
+   所以填完之后整枚 Tag 读起来就是「必刷题-20页」这一个词，
+   而不是「必刷题 - 20 页」四个东西。没填时留出两位的空格。
+
+   这是一个 <button> 而不是 <input>：这个软件给触屏用，输入框一点就弹系统
+   输入法。padding / border / background / font 由 base.css 的全局按钮重置管，
+   这里只写自己的那几条。点开的键盘见 styles/keypad.css。 */
+.tag__page {
+  position: relative;        /* ::after 的触摸热区挂在它上面，见下 */
+  width: calc(var(--page-ch, 2) * .58em + .33em);
+  height: 1.42em;
+  border-bottom: 1px dashed transparent;
+  border-radius: 0;
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  transition: border-color     var(--t-fast) var(--ease),
+              background-color var(--t-fast) var(--ease),
+              color            var(--t-fast) var(--ease),
+              width            var(--t-fast) var(--ease);
+}
+.tag__page.is-empty { border-bottom-color: var(--line-hard); }
+.tag__page:hover { border-bottom-color: var(--ink-3); }
+.tag__page[aria-expanded="true"],
+.tag__page:focus-visible {
+  border-bottom-color: var(--focus);
+  background: #f4f8fe;
+  color: var(--ink);
+  outline: none;
+}
+
+/* 触摸热区。视觉上还是 Tag 名字里那一段（一两位数字宽、比字矮一点），
+   但手指要有得可点：向四周扩一圈透明的 ::after，把「-」「页」也圈进来
+   —— 它们和数字本来就是同一个词（必刷题-20页），点哪儿都该开键盘。
+   向上下的余量只有 .5em：整枚 Tag 才 2.33em 高，再大就会盖到上下相邻的
+   Tag 上，变成「点这枚点到那枚」。行距（.tags-body 的 gap）比这多，正好。 */
+.tag__page::after {
+  content: "";
+  position: absolute;
+  inset: -.5em -.33em;
+}
+
+/* ------------------------------------------------------------ 删除自建 Tag */
+
+.tag__remove {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 1.25em;
+  height: 1.25em;
+  margin-left: -.08em;
+  border-radius: 2px;
+  color: var(--ink-3);
+  opacity: 0;
+  transition: opacity var(--t-fast) var(--ease),
+              background-color var(--t-fast) var(--ease),
+              color var(--t-fast) var(--ease);
+}
+.tag:hover .tag__remove,
+.tag:focus-within .tag__remove { opacity: .65; }
+.tag__remove:hover { opacity: 1; background: rgba(20,24,29,.10); color: var(--ink); }
+.tag__remove:focus-visible { opacity: 1; }
+
+/* 正在被拖动：留在原位变淡，不抽走元素，避免三区重排 */
+.tag.is-dragging {
+  opacity: .34;
+  transform: none;
+  box-shadow: var(--shadow-chip);
+}
+
+/* 点选态：拖拽之外的第二条布置路径 */
+.tag.is-selected {
+  border-color: var(--focus);
+  background: #f4f8fe;
+  box-shadow: 0 0 0 1px var(--focus), var(--shadow-chip);
+}
+.tag.is-selected .tag__grip { color: var(--focus); }
+
+/* 新建成功 / 撞名时指向已有那枚：一次很轻的入场，不做弹跳 */
+.tag.is-created { animation: tag-in 240ms var(--ease); }
+
+@keyframes tag-in {
+  from { opacity: 0; transform: translateY(-4px) scale(.97); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* -------------------------------------------------------- 自定义 Tag 入口
+   虚线框 + 无底色，与实心描边的普通 Tag 一眼分开，但不是个大按钮。 */
+
+.tag-add {
+  display: inline-flex;
+  align-items: center;
+  gap: .42em;
+  min-height: 2.33em;
+  padding: 0 .92em 0 .75em;
+  border: 1px dashed var(--line-hard);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--ink-2);
+  transition: border-color     var(--t-fast) var(--ease),
+              background-color var(--t-fast) var(--ease),
+              color            var(--t-fast) var(--ease);
+}
+.tag-add:hover { border-color: var(--ink-3); background: var(--surface); color: var(--ink); }
+.tag-add:disabled { opacity: .4; cursor: not-allowed; }
+.tag-add:disabled:hover { border-color: var(--line-hard); background: transparent; color: var(--ink-2); }
+
+.tag-add__plus { font-size: 1.08em; line-height: 1; color: var(--ink-3); }
+
+/* ------------------------------------------------------------ 新建输入行 */
+
+/* 这里是三区里唯一真会弹系统输入法的地方（输 Tag 名字），躲不掉也不该躲
+   —— 它是打字，不是数字。字号由 .tags-body 给，base.css 的 input 重置
+   会让它继承下来，所以下面不再自己写 font-size。 */
+.tag-compose {
+  display: inline-flex;
+  align-items: center;
+  gap: .5em;
+  min-height: 2.33em;
+}
+.tag-compose[hidden] { display: none; }
+
+.tag-compose__input {
+  width: 8.67em;
+  min-height: 2.33em;
+  padding: 0 .75em;
+  border: 1px solid var(--line-hard);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--ink);
+  transition: border-color     var(--t-fast) var(--ease),
+              background-color var(--t-fast) var(--ease);
+}
+.tag-compose__input::placeholder { color: var(--ink-3); }
+.tag-compose__input:focus { border-color: var(--focus); outline: none; }
+
+.tag-compose__ok,
+.tag-compose__cancel {
+  min-height: 2.33em;
+  padding: 0 .83em;
+  border: 1px solid var(--line-hard);
+  border-radius: var(--radius);
+  background: var(--surface);
+  transition: border-color     var(--t-fast) var(--ease),
+              background-color var(--t-fast) var(--ease),
+              color            var(--t-fast) var(--ease);
+}
+.tag-compose__ok { color: var(--ink); }
+.tag-compose__ok:hover { background: var(--surface-2); border-color: #9ba2ab; }
+.tag-compose__cancel { border-color: transparent; color: var(--ink-3); }
+.tag-compose__cancel:hover { background: var(--surface-3); color: var(--ink-2); }
+
+/* 空名字：底色轻闪一下，不抖动、不弹跳 */
+.tag-compose.is-invalid .tag-compose__input {
+  border-color: var(--danger);
+  animation: compose-bad 420ms var(--ease);
+}
+
+@keyframes compose-bad {
+  0%, 100% { background: var(--surface); }
+  40%      { background: var(--danger-tint); }
+}
+
+/* --------------------------------------------------------------- 拖影
+   三层：外层只做 translate（跟手，只走合成层），里面两层是「出发时的样子」
+   与「落点上的样子」，落位时交叉交接。分层是为了让「跟手」与「落位」两段
+   动画互不打架。
+   --landing-ms 由调用方按飞行距离设定，里面两层跟着同一个节拍。
+   --landing-ease 也由调用方给（panel-board.js 的 FLIGHT_EASE）：外层平移、出发层
+   淡出、落点层长大 —— 这三段共用一条曲线。那条曲线为什么不是全局的 --ease，
+   理由写在 FLIGHT_EASE 上：起手必须轻，否则松手那一帧的停顿会变成一记猛冲。
+   （只有「拿起来那 1.03 的浮起就地压平」这一段仍旧走 --t-fast 的 --ease：它只有
+   3%，又是一次「压实」的小动作，跟着大局走反而肉。） */
+
+.drag-ghost {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 900;
+  margin: 0;
+  pointer-events: none;
+  will-change: transform;
+}
+
+/* 「出发时的样子」：dnd.js 在拿起来那一刻克隆的源元素（三区那枚 Tag，或格内
+   那枚条目）。跟手期间它就是它，落位时原地淡掉 —— 变大不归它管，见下。 */
+.drag-ghost__inner {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+  transform-origin: 50% 50%;
+  transform: scale(1);
+  opacity: 1;
+  transition: transform var(--t-fast) var(--ease),
+              box-shadow var(--t-fast) var(--ease),
+              opacity var(--t-fast) var(--ease);
+}
+
+/* 拿起来：轻微放大 + 浮起投影 */
+.drag-ghost.is-lifted .drag-ghost__inner {
+  transform: scale(1.03);
+  box-shadow: var(--shadow-float);
+}
+
+/* 落位：「出发时的样子」淡掉。
+   · 缩放压到 1：拿起来时那 1.03 的浮起就地压平（「放下」本来就该压实），
+     **但它不再跟着放大** —— 放大是落点那一层的事。从前是把这一层按字号
+     放大，而 Tag 的盒子比条目大（同字号下宽 1.8 倍、高 1.35 倍），拖影于是
+     长过头，交接时只好再缩回来，看着就是「先变得超级大，再缩回原来的样子」
+     （用户报的毛病）。
+   · 淡出只用前 35%：这段时间它正飞过一半路程，新的样子已经在它身上显影
+     （见 .drag-ghost__arrival），交叉的那一段两层字号相同，所以文字大小
+     是连续的 —— 变的只是外壳。
+   · 末尾用 --t-fast 的兜底过渡不必再写：35% 一过它就是透明的，接着被
+     flyGhost 的 setTimeout 连同外层一起移除。 */
+.drag-ghost.is-landing .drag-ghost__inner {
+  transform: scale(1);
+  opacity: 0;
+  transition: transform var(--t-fast) var(--ease),
+              opacity   calc(var(--landing-ms, 150ms) * .35) var(--landing-ease, var(--ease));
+}
+
+/* 「落点上的样子」：flyGhost 在松手那一刻克隆的目标元素（格内条目，或回程时
+   要回去的那枚 Tag）。盒子按目标 rect 钉死（宽高与居中偏移由 JS 写成内联值，
+   这里只管怎么把它摆到拖影中心），起步缩放在 --arrival-from —— 也就是「出发
+   字号 ÷ 目标字号」，所以它一现身就是出发元素那个字号；长到 1 时正好是目标的
+   实际大小，交接前后同一个盒子，一格不差。 */
+.drag-ghost__arrival {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  display: flex;
+  align-items: center;
+  transform-origin: 50% 50%;
+  transform: scale(var(--arrival-from, 1));
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* 落位：新样子先实起来（前两成），旧样子慢一步褪掉（前三成半）——
+   顺序反过来的话，中间会有一小段什么也看不清。
+   两层的字号在交接窗口里相同，所以这里看着是「壳换了」，不是「跳了一下」。
+   放大与平移同一条曲线（--landing-ease）：字号和位置一起起手、一起收尾，
+   曲线对不上的话，会先看见「位置动了、字还没长」这种脱节。 */
+.drag-ghost.is-landing .drag-ghost__arrival {
+  transform: scale(1);
+  opacity: 1;
+  transition: transform var(--landing-ms, 150ms) var(--landing-ease, var(--ease)),
+              opacity   calc(var(--landing-ms, 150ms) * .2) var(--landing-ease, var(--ease));
+}
+
+/* 拖动期间统一光标与文本选择 */
+body.is-dragging { cursor: grabbing; }
+body.is-dragging * { cursor: grabbing !important; }
+body.is-dragging .drag-ghost,
+body.is-dragging .drag-ghost * { cursor: grabbing; }
+
+/* ------------------------------------------------------------ 窄屏
+   窄屏下 .stack 的高度由内容决定，而三区正是内容之一 —— 继续用 cqh 就成了
+   循环引用（Tag 变大 → 三区变高 → Tag 更大），浏览器只能按 0 处理。
+   所以这里换个算式：二区那枚科目大字在窄屏被封顶到 --glyph-cap（见 board.css），
+   取它的 0.75 倍。这个 .75 不是为了桌面那条比例（那条已经取消了，见 .tags-body
+   的注释），而是为了让 Tag 比格内条目小一点点：条目恒是 0.9 × 同一个 cap，
+   于是「拖进去变大」在窄屏四档一律成立（比例恒为 1.2，四档量到的都是同一组数）。 */
+@media (max-width: 760px) {
+  .tags-body { font-size: calc(var(--glyph-cap) * .75); }
+
+  /* 字小了，手指没变小。三区这些方块是可点可拖的控件，高度守住 34px
+     （和格内那枚撤下键同一个触摸下限），只是上下留白比字多。 */
+  .tag, .tag-add, .tag-compose, .tag-compose__input,
+  .tag-compose__ok, .tag-compose__cancel { min-height: max(2.33em, 34px); }
+}
